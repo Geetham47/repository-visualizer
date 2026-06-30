@@ -14,8 +14,13 @@ URL = (
     f"models/gemini-2.5-flash:generateContent?key={API_KEY}"
 )
 
-CACHE_FILE = "cache/summary_cache.json"
-
+CACHE_FILE = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "cache",
+    "summary_cache.json",
+)
+os.makedirs("cache", exist_ok=True)
 
 def load_cache():
 
@@ -32,6 +37,11 @@ def load_cache():
 
 
 def save_cache(cache):
+
+    os.makedirs(
+        os.path.dirname(CACHE_FILE),
+        exist_ok=True
+    )
 
     with open(
         CACHE_FILE,
