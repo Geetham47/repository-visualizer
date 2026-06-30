@@ -78,7 +78,30 @@ def ai(path: str, repo_path: str, mode: str):
     full_path,
     mode
 )
+@app.get("/source")
+def get_source(repo_path: str, path: str):
 
+    import os
+    from fastapi.responses import PlainTextResponse
+
+    full_path = os.path.join(repo_path, path)
+
+    if not os.path.exists(full_path):
+        return PlainTextResponse(
+            "File not found.",
+            status_code=404
+        )
+
+    with open(
+        full_path,
+        "r",
+        encoding="utf-8",
+        errors="ignore"
+    ) as f:
+
+        content = f.read()
+
+    return PlainTextResponse(content)
     return {
         "summary": summary
     }

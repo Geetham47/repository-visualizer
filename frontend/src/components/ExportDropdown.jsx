@@ -13,7 +13,9 @@ function ExportDropdown({
 
   exportPNG,
 
-}) {
+  exportSourceFile,
+
+}) { 
 
   const [open, setOpen] = useState(false);
 
@@ -152,9 +154,9 @@ color:"white",
 
 >
 
-<FiFileText/>
+📄
 
-Export JSON
+JSON
 
 </div>
 
@@ -185,9 +187,42 @@ borderTop:"1px solid #2E3440",
 
 >
 
-<FiImage/>
+🖼️
 
-Export PNG
+PNG
+
+</div>
+
+<div
+
+onClick={()=>{
+exportSourceFile();
+setOpen(false);
+}}
+
+style={{
+
+padding:"14px 18px",
+
+display:"flex",
+
+gap:"12px",
+
+cursor:"pointer",
+
+alignItems:"center",
+
+color:"white",
+
+borderTop:"1px solid #2E3440",
+
+}}
+
+>
+
+💻
+
+Source Code
 
 </div>
 
