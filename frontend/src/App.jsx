@@ -30,9 +30,8 @@ function App() {
   const [outgoingEdges, setOutgoingEdges] = useState([]);
   const [graphData, setGraphData] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [repoPath, setRepoPath] = useState(
-  localStorage.getItem("lastRepoPath") || ""
-);
+  const [selectedZip, setSelectedZip] = useState(null);
+  const [repoId, setRepoId] = useState(null);
   const [aiSummary, setAiSummary] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiMode, setAiMode] = useState("explain");
@@ -40,73 +39,107 @@ function App() {
   const graphRef = useRef(null);
 
   // --------------------------- API calls ----------------------------
-  const loadRepository = () => {
-    if (repoPath.trim() !== "") {
-  localStorage.setItem("lastRepoPath", repoPath);
-}
-    api
-      .get(`/graph?path=${repoPath}`)
-      .then((res) => {
-        setGraphData(res.data);
+const uploadRepository = async () => {
+localStorage.removeItem("repoId");
+localStorage.removeItem("graphData");
+console.log("UPLOAD CALLED");
+  if (!selectedZip) {
 
-        const rawNodes = res.data.nodes;
+    alert("Please select a ZIP file.");
 
-        const graphEdges = res.data.edges.map((edge, index) => ({
-          id: `${edge.source}-${edge.target}-${index}`,
-          source: edge.source,
-          target: edge.target,
-          type: "straight",
-          animated: highlightedEdges.includes(
-            `${edge.source}-${edge.target}`
-          ),
-          style: {
-            stroke: highlightedEdges.includes(
-              `${edge.source}-${edge.target}`
-            )
-              ? "#00bfff"
-              : "#666",
-            strokeWidth: highlightedEdges.includes(
-              `${edge.source}-${edge.target}`
-            )
-              ? 4
-              : 1,
-            opacity:
-              highlightedEdges.length === 0
-                ? 1
-                : highlightedEdges.includes(`${edge.source}-${edge.target}`)
-                ? 1
-                : 0.15,
-          },
-        }));
+    return;
 
-        const { nodes: graphNodes, edges: layoutedEdges } =
-          getLayoutedElements(rawNodes, graphEdges);
+  }
 
-        // Wire every node up to render through CustomNode/nodeStyle.js
-        setNodes(
-          graphNodes.map((n) => ({
-            ...n,
-            type: "custom",
-            data: {
-              ...n.data,
-              type: n.data?.type || inferNodeType(n.id),
-            },
-          }))
-        );
+  const formData = new FormData();
 
-        setEdges(layoutedEdges);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  };
+  formData.append("file", selectedZip);
+
+  try {
+
+    const res = await api.post(
+      "/upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+setRepoId(res.data.repo_id);
+
+localStorage.setItem(
+  "repoId",
+  res.data.repo_id
+);
+
+const graph = res.data.graph;
+
+localStorage.setItem(
+  "repoId",
+  res.data.repo_id
+);
+
+    setGraphData(graph);
+
+    const rawNodes = graph.nodes;
+
+    const graphEdges = graph.edges.map((edge, index) => ({
+      id: `${edge.source}-${edge.target}-${index}`,
+      source: edge.source,
+      target: edge.target,
+      type: "straight",
+      animated: false,
+      style: {
+        stroke: "#666",
+        strokeWidth: 1,
+        opacity: 1,
+      },
+    }));
+
+    const { nodes: graphNodes, edges: layoutedEdges } =
+      getLayoutedElements(rawNodes, graphEdges);
+
+    setNodes(
+      graphNodes.map((n) => ({
+        ...n,
+        type: "custom",
+        data: {
+          ...n.data,
+          type: n.data?.type || inferNodeType(n.id),
+        },
+      }))
+    );
+
+    setEdges(layoutedEdges);
+
+    setSelectedNode(null);
+
+    setHighlightedNodes([]);
+
+    setIncomingEdges([]);
+
+    setOutgoingEdges([]);
+
+    setSelectedZip(null);
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert("Unable to analyze repository.");
+
+  }
+
+};
 
   const fetchAISummary = async (filePath, mode = aiMode) => {
     setLoadingAI(true);
 
     try {
       const res = await api.get(
-        `/ai?repo_path=${repoPath}&path=${filePath}&mode=${mode}`
+        `/ai?repo_id=${repoId}&path=${filePath}&mode=${mode}`
       );
 
       setAiSummary(res.data.summary);
@@ -122,7 +155,7 @@ function App() {
     if (!graphData) return;
 
     const exportData = {
-      repository: repoPath.split("/").pop(),
+      repository: repoId || "Uploaded Repository",
       generated_at: new Date().toLocaleString(),
       ...graphData,
     };
@@ -175,7 +208,7 @@ function App() {
 
     const response = await api.get(
 
-      `/source?repo_path=${repoPath}&path=${selectedNode.id}`,
+      `/source?repo_id=${repoId}&path=${selectedNode.id}`,
 
       {
         responseType: "blob",
@@ -211,16 +244,78 @@ function App() {
   }
 
 };
-  // ---------------------------- effects -----------------------------
-  useEffect(() => {
+// ---------------------------- effects -----------------------------
 
-  if (repoPath) {
-    loadRepository();
-  }
+useEffect(() => {
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const savedRepoId = localStorage.getItem("repoId");
+
+  if (!savedRepoId) return;
+
+  const restoreRepository = async () => {
+
+    try {
+
+      const res = await api.get(
+        `/repository?repo_id=${savedRepoId}`
+      );
+
+      setRepoId(savedRepoId);
+
+      const graph = res.data.graph;
+
+      setGraphData(graph);
+
+      const rawNodes = graph.nodes;
+
+      const graphEdges = graph.edges.map((edge, index) => ({
+        id: `${edge.source}-${edge.target}-${index}`,
+        source: edge.source,
+        target: edge.target,
+        type: "straight",
+        animated: false,
+        style: {
+          stroke: "#666",
+          strokeWidth: 1,
+          opacity: 1,
+        },
+      }));
+
+      const {
+        nodes: layoutedNodes,
+        edges: layoutedEdges,
+      } = getLayoutedElements(
+        rawNodes,
+        graphEdges
+      );
+
+      setNodes(
+        layoutedNodes.map((n) => ({
+          ...n,
+          type: "custom",
+          data: {
+            ...n.data,
+            type: n.data?.type || inferNodeType(n.id),
+          },
+        }))
+      );
+
+      setEdges(layoutedEdges);
+
+    } catch (err) {
+
+      console.error(err);
+
+      localStorage.removeItem("repoId");
+
+    }
+
+  };
+
+  restoreRepository();
 
 }, []);
+
 
   // -------------------------- event handlers -------------------------
   const highlightFromNode = (node) => {
@@ -273,10 +368,30 @@ function App() {
   };
 
   const onNodeClick = (_, node) => {
-    setSelectedNode(node);
-    fetchAISummary(node.id, aiMode);
-    highlightFromNode(node);
-  };
+
+  if (selectedNode?.id === node.id) {
+
+    setSelectedNode(null);
+
+    setAiSummary("");
+
+    setHighlightedNodes([]);
+
+    setIncomingEdges([]);
+
+    setOutgoingEdges([]);
+
+    return;
+
+  }
+
+  setSelectedNode(node);
+
+  fetchAISummary(node.id, aiMode);
+
+  highlightFromNode(node);
+
+};
 
   // --------------------------- derived values --------------------------
   const displayNodes = nodes.map((node) => ({
@@ -437,9 +552,9 @@ function App() {
         setSearchTerm={setSearchTerm}
         selectNodeById={selectNodeById}
         nodes={nodes}
-        repoPath={repoPath}
-        setRepoPath={setRepoPath}
-        loadRepository={loadRepository}
+        selectedZip={selectedZip}
+setSelectedZip={setSelectedZip}
+uploadRepository={uploadRepository}
         exportJSON={exportJSON}
         exportPNG={exportPNG}
         exportSourceFile={exportSourceFile}

@@ -24,26 +24,13 @@ function Navbar({
   setSearchTerm,
   selectNodeById,
   nodes,
-  repoPath,
-  setRepoPath,
-  loadRepository,
+  selectedZip,
+  setSelectedZip,
+  uploadRepository,
   exportJSON,
   exportPNG,
   exportSourceFile,
 }) {
-  const handleBrowseFolder = async () => {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/select-folder");
-
-    const data = await response.json();
-
-    if (data.path) {
-      setRepoPath(data.path);
-    }
-  } catch (err) {
-    console.error("Failed to open folder picker:", err);
-  }
-};
   return (
     <div
       style={{
@@ -260,45 +247,37 @@ function Navbar({
           />
         </div>
 
-        {/* Directory Input */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            background: "#1C1F26",
-            height: "36px",
-            padding: "0 10px",
-            borderRadius: "8px",
-            border: "1px solid #2E3440",
-            minWidth: 0,
-          }}
-        >
-          <FiFolder
-  color="#8A93A3"
-  style={{ flexShrink: 0 }}
-/>
+        {/* ZIP Upload */}
+<div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    background: "#1C1F26",
+    height: "36px",
+    padding: "0 10px",
+    borderRadius: "8px",
+    border: "1px solid #2E3440",
+    minWidth: 0,
+  }}
+>
+  <FiFolder color="#8A93A3" />
 
-          <input
-            value={repoPath}
-            onChange={(e) => setRepoPath(e.target.value)}
-            title={repoPath}
-            style={{
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              marginLeft: "6px",
-              width: "clamp(100px, 14vw, 220px)",
-              color: "white",
-              fontSize: "13px",
-              minWidth: 0,
-              textOverflow: "ellipsis",
-            }}
-          />
-        </div>
+  <input
+    type="file"
+    accept=".zip"
+    onChange={(e) => setSelectedZip(e.target.files[0])}
+    style={{
+      marginLeft: "8px",
+      color: "white",
+      fontSize: "12px",
+      width: "220px",
+    }}
+  />
+</div>
 
         {/* Analyze Button */}
         <button
-          onClick={loadRepository}
+          onClick={uploadRepository}
           style={{
             height: "36px",
             padding: "0 14px",
